@@ -34,9 +34,9 @@ def check_correctness():
     result = multiply(2, A, B)
 
     if result != expected:
-        raise ValueError("Error en la validación")
+        raise ValueError("Validation error")
 
-    print("Validación correcta con matriz 2x2.")
+    print("Successful validation with a 2x2 matrix.")
 
 
 if __name__ == "__main__":
@@ -72,5 +72,7 @@ if __name__ == "__main__":
     median = statistics.median(times)
     stddev = statistics.stdev(times) if len(times) > 1 else 0.0
 
-    print("\n Resultados")
-    print(f"Mediana: {median:.4
+    print("\n Results")
+    print(f"Median: {median:.4f} ms")
+    print(f"Standard deviation: {stddev:.4f} ms")
+    print(f"Peak memory: {mem_mb:.4f} MB")
