@@ -1,74 +1,140 @@
-#define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
+#include <windows.h>
 #include <math.h>
+#include <psapi.h>
 
-static double **alloc_matrix(int n) {
-    double **m = malloc((size_t)n * sizeof(*m));
-    if (!m) { perror("malloc"); exit(2); }
-    for (int i=0;i<n;i++) {
-        m[i] = calloc((size_t)n, sizeof(**m));
-        if (!m[i]) { perror("calloc"); exit(2); }
-    }
-    return m;
-}
-static void free_matrix(double **m, int n) { for(int i=0;i<n;i++) free(m[i]); free(m); }
-static void fill(double **a, double **b, int n) {
-    for(int i=0;i<n;i++) for(int j=0;j<n;j++) {
-        a[i][j] = (((i*17 + j*13 + 7) % 101) - 50) / 50.0;
-        b[i][j] = (((i*11 + j*19 + 23) % 101) - 50) / 50.0;
+void multiply(int n, double **A, double **B, double **C) {
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            double acc = 0.0;
+            for (int k = 0; k < n; k++) {
+                acc += A[i][k] * B[k][j];
+            }
+            C[i][j] = acc;
+        }
     }
 }
-static double **multiply(double **a, double **b, int n) {
-    double **c=alloc_matrix(n);
-    for(int i=0;i<n;i++) for(int j=0;j<n;j++) {
-        double s=0.0;
-        for(int k=0;k<n;k++) s += a[i][k]*b[k][j];
-        c[i][j]=s;
+
+void check_correctness() {
+    double A_data[2][2] = {{1, 2}, {3, 4}};
+    double B_data[2][2] = {{2, 0}, {1, 2}};
+    double expected[2][2] = {{4, 4}, {10, 8}};
+    double *A[2], *B[2], *C[2];
+
+    for (int i = 0; i < 2; i++) {
+        A[i] = A_data[i];
+        B[i] = B_data[i];
+        C[i] = malloc(2 * sizeof(double));
     }
-    return c;
+
+    multiply(2, A, B, C);
+
+    for (int i = 0; i < 2; i++)
+        for (int j = 0; j < 2; j++)
+            if (fabs(C[i][j] - expected[i][j]) > 1e-6) {
+                printf("Error en la validación.\n");
+                exit(1);
+            }
+
+    printf("Validación correcta con matriz 2x2.\n");
+
+    for (int i = 0; i < 2; i++) free(C[i]);
 }
-static double checksum(double **c, int n) {
-    double sum=0.0;
-    for(int i=0;i<n;i++) for(int j=0;j<n;j++) sum += c[i][j]*(1+((i*7+j*3)%11));
-    return sum;
+
+int cmp_double(const void *a, const void *b) {
+    double x = *(double *)a;
+    double y = *(double *)b;
+    return (x > y) - (x < y);
 }
-static double now_seconds(void) {
-    struct timespec t;
-    clock_gettime(CLOCK_MONOTONIC, &t);
-    return (double)t.tv_sec + (double)t.tv_nsec / 1e9;
-}
-static void known_tests(void) {
-    double **a=alloc_matrix(2), **b=alloc_matrix(2);
-    a[0][0]=1; a[0][1]=2; a[1][0]=3; a[1][1]=4;
-    b[0][0]=5; b[0][1]=6; b[1][0]=7; b[1][1]=8;
-    double **c=multiply(a,b,2);
-    double expected[2][2]={{19,22},{43,50}};
-    for(int i=0;i<2;i++) for(int j=0;j<2;j++)
-        if(fabs(c[i][j]-expected[i][j])>1e-12) { fprintf(stderr,"known test failed\n"); exit(3); }
-    free_matrix(a,2); free_matrix(b,2); free_matrix(c,2);
-}
-int main(int argc, char **argv) {
-    if(argc!=4) { fprintf(stderr,"usage: matrix_multiply n repetitions warmups\n"); return 1; }
-    int n=atoi(argv[1]), reps=atoi(argv[2]), warmups=atoi(argv[3]);
-    if(n<1 || reps<1 || warmups<0) return 1;
-    known_tests();
-    double **a=alloc_matrix(n), **b=alloc_matrix(n);
-    fill(a,b,n);
-    for(int i=0;i<warmups;i++) { double **c=multiply(a,b,n); volatile double check=checksum(c,n); (void)check; free_matrix(c,n); }
-    printf("{\"language\":\"C\",\"n\":%d,\"times_seconds\":[",n);
-    double check=0.0;
-    for(int i=0;i<reps;i++) {
-        double start=now_seconds();
-        double **c=multiply(a,b,n);
-        double elapsed=now_seconds()-start;
-        check=checksum(c,n);
-        free_matrix(c,n);
-        if(i) printf(",");
-        printf("%.9f",elapsed);
+
+int main(int argc, char *argv[]) {
+
+    const char *filename = (argc > 1) ? argv[1] : "data/matrix_3.txt";
+
+    FILE *f = fopen(filename, "r");
+    if (!f) {
+        printf("No se pudo abrir el archivo %s\n", filename);
+        return 1;
     }
-    printf("],\"checksum\":%.12f}\n",check);
-    free_matrix(a,n); free_matrix(b,n);
+
+    int n;
+    fscanf(f, "%d", &n);
+
+    double **A = malloc(n * sizeof(double *));
+    double **B = malloc(n * sizeof(double *));
+    double **C = malloc(n * sizeof(double *));
+    for (int i = 0; i < n; i++) {
+        A[i] = malloc(n * sizeof(double));
+        B[i] = malloc(n * sizeof(double));
+        C[i] = malloc(n * sizeof(double));
+    }
+
+    for (int i = 0; i < n; i++)
+        for (int j = 0; j < n; j++)
+            fscanf(f, "%lf", &A[i][j]);
+
+    for (int i = 0; i < n; i++)
+        for (int j = 0; j < n; j++)
+            fscanf(f, "%lf", &B[i][j]);
+
+    fclose(f);
+
+    check_correctness();
+
+    multiply(n, A, B, C);
+
+    int reps = 5;
+    double times[5];
+    LARGE_INTEGER freq, start, end;
+    QueryPerformanceFrequency(&freq);
+
+    printf("--- Benchmark C (%dx%d) ---\n", n, n);
+
+    double sum = 0.0;
+
+    for (int r = 0; r < reps; r++) {
+        QueryPerformanceCounter(&start);
+        multiply(n, A, B, C);
+        QueryPerformanceCounter(&end);
+
+        double ms = (double)(end.QuadPart - start.QuadPart) * 1000.0 / freq.QuadPart;
+        times[r] = ms;
+        sum += ms;
+
+        printf("Repetición %d: %.4f ms\n", r + 1, ms);
+    }
+
+    PROCESS_MEMORY_COUNTERS pmc;
+    double mem_mb = 0.0;
+    if (GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc))) {
+        mem_mb = pmc.PeakWorkingSetSize / (1024.0 * 1024.0);
+    }
+
+    double mean = sum / reps;
+    double var = 0.0;
+
+    for (int i = 0; i < reps; i++)
+        var += pow(times[i] - mean, 2);
+
+    double stddev = sqrt(var / reps);
+
+    qsort(times, reps, sizeof(double), cmp_double);
+    double median = times[reps / 2];
+
+    printf("\n--- Resultados ---\n");
+    printf("Mediana: %.4f ms\n", median);
+    printf("Desviación estándar: %.4f ms\n", stddev);
+    printf("Memoria pico: %.4f MB\n", mem_mb);
+
+    for (int i = 0; i < n; i++) {
+        free(A[i]);
+        free(B[i]);
+        free(C[i]);
+    }
+    free(A);
+    free(B);
+    free(C);
+
     return 0;
 }
