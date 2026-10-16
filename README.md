@@ -24,18 +24,25 @@ No third-party Python packages are required by the supplied scripts.
 
 ## Repository Structure.
 Assignment01-Matrix-Multiplication/
+│
 ├── README.md
-├── evaluation.py
+├── evaluation.py 
 ├── make.py
+│
 ├── data/
+│
 ├── src/
 │   ├── python/
 │   │   └── multiply.py
+│   │
 │   ├── java/
 │   │   └── MultiplySimple.java
+│   │
 │   └── c/
 │       └── matrix_multiply.c
+│
 └── results.md
+
 
 evaluation.py: Runs the benchmarks and summarizes the results.
 make.py: Generates input matrices.
