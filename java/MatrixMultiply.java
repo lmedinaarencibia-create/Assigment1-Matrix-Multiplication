@@ -29,12 +29,12 @@ public class MultiplySimple {
         for (int i = 0; i < 2; i++) {
             for (int j = 0; j < 2; j++) {
                 if (Math.abs(C[i][j] - expected[i][j]) > 1e-6) {
-                    System.out.println("Error en la validación.");
+                    System.out.println("Validation error");
                     System.exit(1);
                 }
             }
         }
-        System.out.println("Validación correcta con matriz 2x2.");
+        System.out.println("Successful validation with a 2x2 matrix.");
     }
 
     public static double[][][] loadMatrices(String filename) {
@@ -57,7 +57,7 @@ public class MultiplySimple {
             sc.close();
             return new double[][][]{A, B, new double[n][n]};
         } catch (FileNotFoundException e) {
-            System.out.println("Archivo no encontrado: " + filename);
+            System.out.println("File not found: " + filename);
             System.exit(1);
         }
         return null;
@@ -81,7 +81,7 @@ public class MultiplySimple {
         double[] times = new double[reps];
         double total = 0;
 
-        System.out.println("--- Benchmark Java (" + n + "x" + n + ") ---");
+        System.out.println("Java Benchmark (" + n + "x" + n + ") ---");
 
         for (int r = 0; r < reps; r++) {
             long start = System.nanoTime();
@@ -92,7 +92,7 @@ public class MultiplySimple {
             times[r] = ms;
             total += ms;
 
-            System.out.printf(Locale.US, "Repetición %d: %.4f ms\n", r + 1, ms);
+            System.out.printf(Locale.US, "Repetition %d: %.4f ms\n", r + 1, ms);
         }
 
         Runtime rt = Runtime.getRuntime();
@@ -107,9 +107,9 @@ public class MultiplySimple {
 
         double median = times[reps / 2];
 
-        System.out.println("\n--- Resultados ---");
-        System.out.printf(Locale.US, "Mediana: %.4f ms\n", median);
-        System.out.printf(Locale.US, "Desviación estándar: %.4f ms\n", stddev);
-        System.out.printf(Locale.US, "Memoria usada (heap): %.4f MB\n", usedMB);
+        System.out.println("\nResults:");
+        System.out.printf(Locale.US, "Median: %.4f ms\n", median);
+        System.out.printf(Locale.US, "Standard deviation: %.4f ms\n", stddev);
+        System.out.printf(Locale.US, "Used memory (heap): %.4f MB\n", usedMB);
     }
 }
