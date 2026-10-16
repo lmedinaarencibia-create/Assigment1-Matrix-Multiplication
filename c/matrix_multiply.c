@@ -33,11 +33,11 @@ void check_correctness() {
     for (int i = 0; i < 2; i++)
         for (int j = 0; j < 2; j++)
             if (fabs(C[i][j] - expected[i][j]) > 1e-6) {
-                printf("Error en la validación.\n");
+                printf("Validation error.\n");
                 exit(1);
             }
 
-    printf("Validación correcta con matriz 2x2.\n");
+    printf("Successful validation with 2x2 matrix.\n");
 
     for (int i = 0; i < 2; i++) free(C[i]);
 }
@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
 
     FILE *f = fopen(filename, "r");
     if (!f) {
-        printf("No se pudo abrir el archivo %s\n", filename);
+        printf("Could not open the file %s\n", filename);
         return 1;
     }
 
@@ -89,7 +89,7 @@ int main(int argc, char *argv[]) {
     LARGE_INTEGER freq, start, end;
     QueryPerformanceFrequency(&freq);
 
-    printf("--- Benchmark C (%dx%d) ---\n", n, n);
+    printf("C Benchmark (%dx%d) \n", n, n);
 
     double sum = 0.0;
 
@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
         times[r] = ms;
         sum += ms;
 
-        printf("Repetición %d: %.4f ms\n", r + 1, ms);
+        printf("Repetition %d: %.4f ms\n", r + 1, ms);
     }
 
     PROCESS_MEMORY_COUNTERS pmc;
@@ -122,10 +122,10 @@ int main(int argc, char *argv[]) {
     qsort(times, reps, sizeof(double), cmp_double);
     double median = times[reps / 2];
 
-    printf("\n--- Resultados ---\n");
-    printf("Mediana: %.4f ms\n", median);
-    printf("Desviación estándar: %.4f ms\n", stddev);
-    printf("Memoria pico: %.4f MB\n", mem_mb);
+    printf("\n Results.\n");
+    printf("Median: %.4f ms\n", median);
+    printf("Standard deviation: %.4f ms\n", stddev);
+    printf("Peak memory: %.4f MB\n", mem_mb);
 
     for (int i = 0; i < n; i++) {
         free(A[i]);
