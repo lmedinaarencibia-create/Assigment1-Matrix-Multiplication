@@ -1,57 +1,115 @@
-import java.util.Arrays;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.util.Locale;
+import java.util.Scanner;
 
-public class MatrixMultiply {
-    static double[][] matricesA(int n) {
-        double[][] a = new double[n][n];
-        for (int i=0;i<n;i++) for (int j=0;j<n;j++)
-            a[i][j] = (((i*17 + j*13 + 7) % 101) - 50) / 50.0;
-        return a;
-    }
-    static double[][] matricesB(int n) {
-        double[][] b = new double[n][n];
-        for (int i=0;i<n;i++) for (int j=0;j<n;j++)
-            b[i][j] = (((i*11 + j*19 + 23) % 101) - 50) / 50.0;
-        return b;
-    }
-    static double[][] multiply(double[][] a, double[][] b) {
-        int n=a.length;
-        double[][] c=new double[n][n];
-        for (int i=0;i<n;i++) for (int j=0;j<n;j++) {
-            double s=0.0;
-            for (int k=0;k<n;k++) s += a[i][k]*b[k][j];
-            c[i][j]=s;
+public class MultiplySimple {
+
+    public static void multiply(double[][] A, double[][] B, double[][] C, int n) {
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                double acc = 0.0;
+                for (int k = 0; k < n; k++) {
+                    acc += A[i][k] * B[k][j];
+                }
+                C[i][j] = acc;
+            }
         }
-        return c;
     }
-    static double checksum(double[][] c) {
-        int n=c.length; double sum=0.0;
-        for (int i=0;i<n;i++) for (int j=0;j<n;j++) sum += c[i][j]*(1+((i*7+j*3)%11));
-        return sum;
+
+    public static void checkCorrectness() {
+        double[][] A = {{1, 2}, {3, 4}};
+        double[][] B = {{2, 0}, {1, 2}};
+        double[][] C = new double[2][2];
+
+        double[][] expected = {{4, 4}, {10, 8}};
+
+        multiply(A, B, C, 2);
+
+        for (int i = 0; i < 2; i++) {
+            for (int j = 0; j < 2; j++) {
+                if (Math.abs(C[i][j] - expected[i][j]) > 1e-6) {
+                    System.out.println("Error en la validación.");
+                    System.exit(1);
+                }
+            }
+        }
+        System.out.println("Validación correcta con matriz 2x2.");
     }
-    static void knownTests() {
-        double[][] a={{1,2},{3,4}}, b={{5,6},{7,8}};
-        double[][] expected={{19,22},{43,50}};
-        double[][] c=multiply(a,b);
-        for(int i=0;i<2;i++) for(int j=0;j<2;j++)
-            if(Math.abs(c[i][j]-expected[i][j])>1e-12) throw new AssertionError("known test failed");
-        double[][] id={{1,0},{0,1}}, zero={{0,0},{0,0}};
-        if(Math.abs(multiply(a,id)[1][1]-4)>1e-12 || Math.abs(checksum(multiply(a,zero)))>1e-12)
-            throw new AssertionError("identity/zero test failed");
+
+    public static double[][][] loadMatrices(String filename) {
+        try {
+            Scanner sc = new Scanner(new File(filename));
+            sc.useLocale(Locale.US);
+
+            int n = sc.nextInt();
+            double[][] A = new double[n][n];
+            double[][] B = new double[n][n];
+
+            for (int i = 0; i < n; i++)
+                for (int j = 0; j < n; j++)
+                    A[i][j] = sc.nextDouble();
+
+            for (int i = 0; i < n; i++)
+                for (int j = 0; j < n; j++)
+                    B[i][j] = sc.nextDouble();
+
+            sc.close();
+            return new double[][][]{A, B, new double[n][n]};
+        } catch (FileNotFoundException e) {
+            System.out.println("Archivo no encontrado: " + filename);
+            System.exit(1);
+        }
+        return null;
     }
+
     public static void main(String[] args) {
-        int n=Integer.parseInt(args[0]), repetitions=Integer.parseInt(args[1]), warmups=Integer.parseInt(args[2]);
-        knownTests();
-        double[][] a=matricesA(n), b=matricesB(n);
-        for(int i=0;i<warmups;i++) checksum(multiply(a,b));
-        double[] times=new double[repetitions]; double check=0.0;
-        for(int i=0;i<repetitions;i++) {
-            long start=System.nanoTime();
-            double[][] c=multiply(a,b);
-            times[i]=(System.nanoTime()-start)/1e9;
-            check=checksum(c);
+
+        String filename = (args.length > 0) ? args[0] : "data/matrix_3.txt";
+
+        double[][][] matrices = loadMatrices(filename);
+        double[][] A = matrices[0];
+        double[][] B = matrices[1];
+        double[][] C = matrices[2];
+        int n = A.length;
+
+        checkCorrectness();
+
+        multiply(A, B, C, n);
+
+        int reps = 5;
+        double[] times = new double[reps];
+        double total = 0;
+
+        System.out.println("--- Benchmark Java (" + n + "x" + n + ") ---");
+
+        for (int r = 0; r < reps; r++) {
+            long start = System.nanoTime();
+            multiply(A, B, C, n);
+            long end = System.nanoTime();
+
+            double ms = (end - start) / 1_000_000.0;
+            times[r] = ms;
+            total += ms;
+
+            System.out.printf(Locale.US, "Repetición %d: %.4f ms\n", r + 1, ms);
         }
-        System.out.print("{\"language\":\"Java\",\"n\":"+n+",\"times_seconds\":[");
-        for(int i=0;i<times.length;i++){ if(i>0)System.out.print(","); System.out.print(times[i]); }
-        System.out.println("],\"checksum\":"+check+",\"java\":\""+System.getProperty("java.version")+"\"}");
+
+        Runtime rt = Runtime.getRuntime();
+        rt.gc();
+        double usedMB = (rt.totalMemory() - rt.freeMemory()) / (1024.0 * 1024.0);
+
+        double mean = total / reps;
+
+        double var = 0;
+        for (double t : times) var += Math.pow(t - mean, 2);
+        double stddev = Math.sqrt(var / reps);
+
+        double median = times[reps / 2];
+
+        System.out.println("\n--- Resultados ---");
+        System.out.printf(Locale.US, "Mediana: %.4f ms\n", median);
+        System.out.printf(Locale.US, "Desviación estándar: %.4f ms\n", stddev);
+        System.out.printf(Locale.US, "Memoria usada (heap): %.4f MB\n", usedMB);
     }
 }
